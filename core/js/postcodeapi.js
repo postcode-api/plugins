@@ -13,15 +13,17 @@
             addressButtonText: (args.addressButtonText == undefined) ? 'Select' : args.addressButtonText,
             apiKey:            (args.apiKey == undefined) ? false : args.apiKey,
             buttonText:        (args.buttonText == undefined) ? 'Lookup Address' : args.buttonText,
-            buttonClass:       (args.buttonClass == undefined) ? [  ] : args.buttonClass,
+            buttonLoadingText: (args.buttonLoadingText == undefined) ? 'Loading' : args.buttonLoadingText,
+            buttonClass:       (args.buttonClass == undefined) ? [ ] : args.buttonClass,
             concatSeparator:   (args.concatSeparator == undefined) ? ', ' : args.concatSeparator,
             debug:             (args.debug == undefined) ? true : args.debug,
             field:             (args.field == undefined) ? null : args.field,
-            fields:            (!args.fields) ? { 'line1' : 'line1+line2+line3', 'line2' : 'line4', 'line3' : 'line5+line6', 'town'  : 'town', 'county': 'county', } : args.fields,
+            fields:            (args.fields == undefined) ? { 'line1' : 'line1+line2+line3', 'line2' : 'line4', 'line3' : 'line5+line6', 'town'  : 'town', 'county': 'county', } : args.fields,
+            messageClass:      (args.messageClass == undefined) ? [ ] : args.messageClass,
             modal:             (args.modal == undefined) ? true : args.modal,
             modalTitle:        (args.modalTitle == undefined) ? 'Select Address:' : args.modalTitle,
             selectId:          (args.selectId == undefined) ? 'papi-select-address' : args.selectId,
-            selectClassName:   (args.selectClassName == undefined) ? '' : args.selectClassName,
+            selectClass:       (args.selectClassName == undefined) ? [ ] : args.selectClassName,
             type:              (args.type == undefined)  ? 'lightbox' : args.type,
             txtNotFound:       (args.txtNotFound == undefined) ? 'Postcode not found. Please try again' : args.txtNotFound,
         }
@@ -50,6 +52,11 @@
         this.run = function( e )
         {
             this.queryVal  = this._trim( this.field.value );
+            
+            if( document.getElementById('papi-message-box') != undefined )
+            {
+                document.getElementById('papi-message-box').remove();
+            }
             
             // Is the API key specified?
             if( !this.settings.apiKey )
@@ -113,6 +120,15 @@
             if( !this.settings.modal )
             {
                 this.lightboxCover.onclick = function() { that.lightboxContainer.remove(); that.lightboxCover.remove(); };
+                
+                window.onkeydown = function(e)
+                {
+                    if( e.keyCode == 27 )
+                    {
+                        that.lightboxContainer.remove();
+                        that.lightboxCover.remove();
+                    }
+                };
             }
             
             // Now run the AJAX request:
@@ -124,7 +140,7 @@
                 {
                     that.lightboxContainer.remove();
                     that.lightboxCover.remove();
-                    that._message( that.settings.txtNotFound );
+                    that._message( that.settings.txtNotFound, '', that.button );
                 }
                 else
                 {
@@ -172,7 +188,11 @@
             {
                 document.getElementById(this.settings.selectId).remove();
             }
+            
             var that = this;
+            
+            this.button.disabled = 'disabled';
+            this.button.innerHTML = this.settings.buttonLoadingText;
             
             this._fetch(function( data ) {
                 
@@ -181,11 +201,15 @@
                 if( json.count == 0 )
                 {
                     that._message( that.settings.txtNotFound, '', that.button );
+                    that.button.disabled = false;
+                    that.button.innerHTML = that.settings.buttonText;
                 }
                 else
                 {
                     // Create our elements:
                     var select  = that._generateSelect( json, 10 );
+                    this._addClass( select, this.settings.selectClass );
+                    
                     that._insertAfter( select, that.button );
                     
                     select.onchange = function()
@@ -285,6 +309,7 @@
         // Private functions:
         this._insertAfter = function( newElement, targetElement )
         {
+            console.log(targetElement);
             var parent = targetElement.parentNode;
             
             if( parent.lastchild == targetElement )
@@ -315,6 +340,7 @@
         {
             var div = document.createElement('div');
             div.attributes.className = cls;
+            div.id = 'papi-message-box';
             div.innerHTML = msg;
             
             this._insertAfter( div, after );
